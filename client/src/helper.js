@@ -5,3 +5,5 @@ axios.create({
 
 )
 }
+
+export default axiosApiInstance
