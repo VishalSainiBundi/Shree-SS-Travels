@@ -5,19 +5,24 @@ import axiosApiInstance from "../helper";
 const AuthPage = () => {
   const [activeTab, setActiveTab] = useState("login");
 
+  // Login fields
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+
+  // Register fields (added regPhone)
   const [regName, setRegName] = useState("");
+  const [regPhone, setRegPhone] = useState("");   // <--- NEW
   const [regEmail, setRegEmail] = useState("");
   const [regPassword, setRegPassword] = useState("");
   const [regConfirm, setRegConfirm] = useState("");
   const [agreeTerms, setAgreeTerms] = useState(false);
 
+  // Password visibility
   const [showLoginPw, setShowLoginPw] = useState(false);
   const [showRegPw, setShowRegPw] = useState(false);
   const [showRegConfirm, setShowRegConfirm] = useState(false);
 
-  // Loading states for buttons
+  // Loading states
   const [loginLoading, setLoginLoading] = useState(false);
   const [registerLoading, setRegisterLoading] = useState(false);
 
@@ -28,19 +33,18 @@ const AuthPage = () => {
     e.preventDefault();
     setLoginLoading(true);
     try {
-      const payload = {
-        email: loginEmail,
-        password: loginPassword,
-      };
-      // Uncomment when your API is ready:
-      // const response = await axiosApiInstance.post('/user/login', payload);
-      // console.log('Login success:', response.data);
-      
-      alert("✅ Welcome back! (Demo – replace with actual API call)");
+      if (!axiosApiInstance || typeof axiosApiInstance.post !== "function") {
+        throw new Error("Axios instance not configured properly.");
+      }
+      const payload = { email: loginEmail, password: loginPassword };
+      const response = await axiosApiInstance.post("/user/login", payload);
+      console.log("Login success:", response.data);
+      alert("✅ Welcome back!");
       setLoginEmail("");
       setLoginPassword("");
     } catch (error) {
-      alert("❌ Login failed: " + (error.response?.data?.message || error.message));
+      const msg = error.response?.data?.message || error.message || "Login failed";
+      alert("❌ " + msg);
     } finally {
       setLoginLoading(false);
     }
@@ -50,7 +54,7 @@ const AuthPage = () => {
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
 
-    // --- Client-side validation ---
+    // Validation
     if (regPassword !== regConfirm) {
       alert("❗ Passwords do not match.");
       return;
@@ -63,33 +67,39 @@ const AuthPage = () => {
       alert("❗ Please agree to the Terms & Privacy policy.");
       return;
     }
+    // Optional phone validation – allow only digits, +, -, spaces, parentheses
+    if (regPhone && !/^[\+\d\s\-\(\)]{7,15}$/.test(regPhone)) {
+      alert("❗ Please enter a valid phone number (7-15 digits).");
+      return;
+    }
 
     setRegisterLoading(true);
     try {
+      if (!axiosApiInstance || typeof axiosApiInstance.post !== "function") {
+        throw new Error("Axios instance not configured properly.");
+      }
+
       const payload = {
         name: regName,
+        phone: regPhone,          // <--- PHONE INCLUDED
         email: regEmail,
         password: regPassword,
-        c_password: regConfirm, // assuming your API expects 'c_password'
+        c_password: regConfirm,
       };
-
-      // Real API call:
       const response = await axiosApiInstance.post("/user/create", payload);
       console.log("Registration success:", response.data);
-
-      alert(`✅ Welcome aboard ${regName}! Registration successful.`);
-
+      alert(`✅ Welcome aboard ${regName}!`);
       // Reset form
       setRegName("");
+      setRegPhone("");
       setRegEmail("");
       setRegPassword("");
       setRegConfirm("");
       setAgreeTerms(false);
-      // Optionally switch to login tab
       setActiveTab("login");
     } catch (error) {
-      const message = error.response?.data?.message || error.message;
-      alert("❌ Registration failed: " + message);
+      const msg = error.response?.data?.message || error.message || "Registration failed";
+      alert("❌ " + msg);
     } finally {
       setRegisterLoading(false);
     }
@@ -98,17 +108,13 @@ const AuthPage = () => {
   const togglePw = (setter) => setter((prev) => !prev);
 
   return (
-    // ----- Background container with image & enhanced overlay -----
     <div
       className="min-h-screen flex items-center justify-center p-6 relative bg-cover bg-center bg-no-repeat"
       style={{
         backgroundImage: `url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1920&q=80')`,
       }}
     >
-      {/* Overlay with gradient for depth and better text readability */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#0b2b40]/70 via-[#1a5f8b]/40 to-transparent backdrop-blur-[2px]"></div>
-
-      {/* Decorative floating elements */}
       <div className="absolute top-8 left-8 text-white/20 text-6xl select-none pointer-events-none">
         <i className="fas fa-compass"></i>
       </div>
@@ -116,10 +122,8 @@ const AuthPage = () => {
         <i className="fas fa-globe-asia"></i>
       </div>
 
-      {/* Main Card */}
       <div className="relative z-10 w-full max-w-md">
         <div className="bg-white/20 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/30 transition-all duration-300 hover:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)]">
-          
           {/* Brand Header */}
           <div className="flex items-center gap-3 mb-1">
             <div className="bg-[#1a5f8b]/20 p-3 rounded-2xl backdrop-blur-sm">
@@ -158,9 +162,10 @@ const AuthPage = () => {
             </button>
           </div>
 
-          {/* Login Form */}
+          {/* Login Form (unchanged) */}
           {activeTab === "login" && (
             <form onSubmit={handleLoginSubmit} className="space-y-5">
+              {/* ... same as before ... */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-white/80 mb-1.5 drop-shadow">
                   <i className="fas fa-envelope mr-1.5"></i> Email
@@ -219,11 +224,7 @@ const AuthPage = () => {
                   loginLoading ? "opacity-70 cursor-not-allowed" : ""
                 }`}
               >
-                {loginLoading ? (
-                  <i className="fas fa-spinner fa-spin"></i>
-                ) : (
-                  <i className="fas fa-arrow-right-to-bracket"></i>
-                )}
+                {loginLoading ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-arrow-right-to-bracket"></i>}
                 {loginLoading ? "Signing in..." : "Sign In"}
               </button>
 
@@ -240,9 +241,10 @@ const AuthPage = () => {
             </form>
           )}
 
-          {/* Register Form */}
+          {/* Register Form (with phone field) */}
           {activeTab === "register" && (
             <form onSubmit={handleRegisterSubmit} className="space-y-4">
+              {/* Full Name */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-white/80 mb-1.5 drop-shadow">
                   <i className="fas fa-user mr-1.5"></i> Full Name
@@ -260,6 +262,24 @@ const AuthPage = () => {
                 </div>
               </div>
 
+              {/* Phone Number (NEW) */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-white/80 mb-1.5 drop-shadow">
+                  <i className="fas fa-phone mr-1.5"></i> Phone Number
+                </label>
+                <div className="relative">
+                  <i className="fas fa-phone absolute left-4 top-1/2 -translate-y-1/2 text-white/60"></i>
+                  <input
+                    type="tel"
+                    value={regPhone}
+                    onChange={(e) => setRegPhone(e.target.value)}
+                    placeholder="+91 98765 43210"
+                    className="w-full py-3.5 pl-12 pr-4 bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#f5c842] focus:border-transparent text-white placeholder-white/50 transition"
+                  />
+                </div>
+              </div>
+
+              {/* Email */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-white/80 mb-1.5 drop-shadow">
                   <i className="fas fa-envelope mr-1.5"></i> Email
@@ -277,6 +297,7 @@ const AuthPage = () => {
                 </div>
               </div>
 
+              {/* Password */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-white/80 mb-1.5 drop-shadow">
                   <i className="fas fa-lock mr-1.5"></i> Password
@@ -302,6 +323,7 @@ const AuthPage = () => {
                 </div>
               </div>
 
+              {/* Confirm Password */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-white/80 mb-1.5 drop-shadow">
                   <i className="fas fa-check-circle mr-1.5"></i> Confirm Password
@@ -326,6 +348,7 @@ const AuthPage = () => {
                 </div>
               </div>
 
+              {/* Terms checkbox */}
               <div className="flex items-center gap-2 text-sm text-white/80 font-medium">
                 <input
                   type="checkbox"
@@ -353,11 +376,7 @@ const AuthPage = () => {
                   registerLoading ? "opacity-70 cursor-not-allowed" : ""
                 }`}
               >
-                {registerLoading ? (
-                  <i className="fas fa-spinner fa-spin"></i>
-                ) : (
-                  <i className="fas fa-user-plus"></i>
-                )}
+                {registerLoading ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-user-plus"></i>}
                 {registerLoading ? "Creating account..." : "Create Account"}
               </button>
 
